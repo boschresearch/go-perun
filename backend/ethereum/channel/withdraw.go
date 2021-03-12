@@ -150,6 +150,9 @@ func (a *Adjudicator) callAssetWithdraw(ctx context.Context, request channel.Adj
 		return err
 	}
 	_, err = a.ConfirmTransaction(ctx, tx, a.txSender)
+	if errors.Is(err, errTxTimedOut) {
+		err = newTxTimedoutError(tx.Hash().Hex(), "withdraw", err.Error())
+	}
 	return errors.WithMessage(err, "mining transaction")
 }
 

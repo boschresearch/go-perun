@@ -16,10 +16,12 @@ package channel
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
+
 	"perun.network/go-perun/backend/ethereum/bindings/assetholdereth"
 )
 
@@ -48,6 +50,7 @@ func (d *ETHDepositor) Deposit(ctx context.Context, req DepositReq) (types.Trans
 	opts.Value = req.Balance
 
 	tx, err := contract.Deposit(opts, req.FundingID, req.Balance)
+	fmt.Printf("\nSending deposit transaction for %s, fundingID: %x Balance: %s, TxID %s\n\n", req.Account.Address.Hex(), req.FundingID, req.Balance.String(), tx.Hash().Hex())
 	return []*types.Transaction{tx}, errors.WithMessage(err, "AssetHolderETH depositing")
 }
 

@@ -98,6 +98,9 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 		for i, tx := range txs[a] {
 			acc := f.accounts[*asset.(*Asset)]
 			if _, err := f.ConfirmTransaction(ctx, tx, acc); err != nil {
+				if errors.Is(err, errTxTimedOut) {
+					err = newTxTimedoutError(tx.Hash().Hex(), "fund", err.Error())
+				}
 				return errors.WithMessagef(err, "sending %dth funding TX for asset %d", i, a)
 			}
 			f.log.Debugf("Mined TX: %v", tx.Hash().Hex())

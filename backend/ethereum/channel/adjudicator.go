@@ -77,11 +77,11 @@ func (a *Adjudicator) Progress(ctx context.Context, req channel.ProgressReq) err
 	) (*types.Transaction, error) {
 		return a.contract.Progress(opts, params, state, ethNewState, ethActorIndex, req.Sig)
 	}
-	return a.call(ctx, req.AdjudicatorReq, progress)
+	return a.call(ctx, req.AdjudicatorReq, progress, "progress")
 }
 
 func (a *Adjudicator) callRegister(ctx context.Context, req channel.AdjudicatorReq) error {
-	return a.call(ctx, req, a.contract.Register)
+	return a.call(ctx, req, a.contract.Register, "register")
 }
 
 func (a *Adjudicator) callConclude(ctx context.Context, req channel.AdjudicatorReq, subStates channel.StateMap) error {
@@ -96,11 +96,12 @@ func (a *Adjudicator) callConclude(ctx context.Context, req channel.AdjudicatorR
 		return a.contract.Conclude(opts, params, state, ethSubStates)
 	}
 
-	return a.call(ctx, req, conclude)
+	return a.call(ctx, req, conclude, "conclude")
 }
 
 func (a *Adjudicator) callConcludeFinal(ctx context.Context, req channel.AdjudicatorReq) error {
-	return a.call(ctx, req, a.contract.ConcludeFinal)
+	err := a.call(ctx, req, a.contract.ConcludeFinal, "concludeFinal")
+	return err
 }
 
 type adjFunc = func(
@@ -112,7 +113,7 @@ type adjFunc = func(
 
 // call calls the given contract function `fn` with the data from `req`.
 // `fn` should be a method of `a.contract`, like `a.contract.Register`.
-func (a *Adjudicator) call(ctx context.Context, req channel.AdjudicatorReq, fn adjFunc) error {
+func (a *Adjudicator) call(ctx context.Context, req channel.AdjudicatorReq, fn adjFunc, fnName string) error {
 	ethParams := ToEthParams(req.Params)
 	ethState := ToEthState(req.Tx.State)
 	tx, err := func() (*types.Transaction, error) {
@@ -137,6 +138,9 @@ func (a *Adjudicator) call(ctx context.Context, req channel.AdjudicatorReq, fn a
 	}
 
 	_, err = a.ConfirmTransaction(ctx, tx, a.txSender)
+	if errors.Is(err, errTxTimedOut) {
+		err = newTxTimedoutError(tx.Hash().Hex(), fnName, err.Error())
+	}
 	return errors.WithMessage(err, "mining transaction")
 }
 
